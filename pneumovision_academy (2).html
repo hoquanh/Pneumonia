@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operation Strix: Eden Academy Pneumonia Navigator</title>
+    <!-- React & Babel CDNs -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        spy: {
+                            base: '#061311', // Deep forest/olive black
+                            panel: '#0d221f', // Dark green panel
+                            border: '#1b3f3a', // Goldish/green border
+                            gold: '#dfb15b', // Eden Academy Gold
+                            pink: '#fca5a5', // Anya pink
+                            crimson: '#e11d48' // Thorn princess red
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Space+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #040d0c;
+            background-image: radial-gradient(circle at 50% 50%, #081d1a 0%, #040d0c 100%);
+        }
+        
+        .title-font {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .mono {
+            font-family: 'Space Mono', monospace;
+        }
+
+        /* Gold gradient borders */
+        .gold-border {
+            border-image: linear-gradient(to right, #dfb15b, #1b3f3a) 1;
+        }
+
+        /* Pulsing animations */
+        @keyframes subtle-pulse {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.02); filter: brightness(1.15); }
+        }
+        .waku-waku-pulse {
+            animation: subtle-pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes scan-line {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(300%); }
+        }
+        .scanner::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to bottom, rgba(223, 177, 91, 0), #dfb15b, rgba(223, 177, 91, 0));
+            animation: scan-line 3s infinite linear;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="text-slate-200 antialiased min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // Spy x Family Themed Pathogen Profiles
+        const PATHOGENS = {
+            spneumo: {
+                id: 'spneumo',
+                name: 'Streptococcus pneumoniae',
+                type: 'Typical',
+                dangerLevel: '★★★★☆',
+                gram: 'Gram-positive diplococci (lancet-shaped)',
+                microDetails: 'Catalase-negative, alpha-hemolytic, optochin-sensitive, bile-soluble capsule.',
+                transmission: 'Aerosol droplets; normal upper respiratory flora colonizing lower airway when defense drops.',
+                riskFactors: 'Asplenia (No protective shield!), COPD, elderly, post-influenza, alcoholism.',
+                symptoms: 'Sudden high fever, shaking chills (rigors), productive cough with rust-colored sputum.',
+                anyaTelepathy: "Anya hears: 'Ouch, my chest hurts when I breathe! And my spit looks like rusty orange playground dirt...' (The #1 typical pathogen!)",
+                loidTactical: "Twilight's Assessment: This is the most common community-acquired pneumonia threat. We must protect vulnerable assets without a spleen (asplenia) as they lack encapsulated clearance capacity.",
+                yorSlice: "Thorn Princess Danger Scale: Severe. Known to cause localized high-pressure lobar consolidations.",
+                cxrDesc: 'Dense, homogeneous lobar consolidation strictly respecting anatomical fissures (most commonly lower lobes). Look for prominent dark air bronchograms.',
+                ctDesc: 'Lobar segment with complete fluid-alveolar filling, showing patent black branching airways (air bronchograms) passing through white consolidated lung.',
+                bondPrediction: "Bof! Bond predicts: You will see a patient with sickle cell disease (functional asplenia) presenting with pneumonia. The answer is Streptococcus pneumoniae! Borf!"
+            },
+            mycoplasma: {
+                id: 'mycoplasma',
+                name: 'Mycoplasma pneumoniae',
+                type: 'Atypical',
+                dangerLevel: '★★☆☆☆',
+                gram: 'No cell wall (Completely invisible on Gram stain!)',
+                microDetails: 'Cell membrane contains sterols for stability. Grow on Eaton agar. Positive cold agglutinins (IgM).',
+                transmission: 'Highly contagious in close quarters (Eden Academy dormitories, military barracks, college housing).',
+                riskFactors: 'School-aged children, young adults (< 40 years old), closed-quarter communities.',
+                symptoms: 'Mild, persistent dry hacking cough, low-grade fever, pharyngitis, ear blistering (bullous myringitis).',
+                anyaTelepathy: "Anya hears: 'I feel totally fine to walk around Eden Academy, but why won't this dry hacking cough stop? My eardrum feels blistery...' (Walking pneumonia!)",
+                loidTactical: "Twilight's Assessment: Invisible under standard gram staining because it lacks a peptidoglycan cell wall. Traditional beta-lactam weapons (penicillins) are useless here! Switch to Macrolides or Doxycycline.",
+                yorSlice: "Thorn Princess Danger Scale: Low-to-moderate. Sneaks in silently as diffuse bilateral interstitial markings.",
+                cxrDesc: 'Diffuse, patchy, bilateral interstitial markings radiating from the hila. The scan looks far worse than the patient actually feels.',
+                ctDesc: 'Ground-glass opacities, centrilobular nodules, and "tree-in-bud" signs representing cellular debris clogging small airways.',
+                bondPrediction: "Bof! Bond predicts: College student or military recruit with an eardrum blister and dry cough. Lab will show IgM antibodies that clump red blood cells in the cold. Borf!"
+            },
+            legionella: {
+                id: 'legionella',
+                name: 'Legionella pneumophila',
+                type: 'Atypical',
+                dangerLevel: '★★★★★',
+                gram: 'Gram-negative rod (Silver stain required!)',
+                microDetails: 'Requires Charcoal Yeast Extract (BCYE) agar supplemented with Iron and L-cysteine.',
+                transmission: 'Aerosolized water sources (Eden Academy luxury water fountains, hotel cooling units, cruise lines).',
+                riskFactors: 'Smokers, older age, chronic lung disease, immunocompromised agents.',
+                symptoms: 'Very high fever, relative bradycardia, watery diarrhea, abdominal pain, severe neurological confusion.',
+                anyaTelepathy: "Anya hears: 'My stomach is cramping, I have awful diarrhea, my head is so confused, and why is my heart beating so slow when my fever is so high?' (Severe hyponatremia!)",
+                loidTactical: "Twilight's Assessment: This culprit infiltrates through water systems. Check the serum sodium levels—classic vignettes present with deep hyponatremia (sodium < 130). Treat with fluoroquinolones.",
+                yorSlice: "Thorn Princess Danger Scale: Extreme. Causes asymmetric consolidation and system-wide gastrointestinal havoc.",
+                cxrDesc: 'Rapidly progressive, dense lobar consolidation, starting unilaterally but can become bilateral. Often accompanied by pleural effusion.',
+                ctDesc: 'Dense alveolar consolidation with subpleural ground-glass haziness and fluid accumulation in the pleural cavity.',
+                bondPrediction: "Bof! Bond predicts: An older traveler who recently stayed at a hotel, now has severe pneumonia, watery diarrhea, and a low sodium lab result. Urine antigen testing is the next best step! Borf!"
+            },
+            saureus: {
+                id: 'saureus',
+                name: 'Staphylococcus aureus',
+                type: 'Typical (Secondary)',
+                dangerLevel: '★★★★★',
+                gram: 'Gram-positive cocci in clusters (resembles deadly golden grapes!)',
+                microDetails: 'Catalase-positive, Coagulase-positive, beta-hemolytic on blood agar.',
+                transmission: 'Aspiration of colonizing nasopharyngeal flora or blood-borne seeding (such as in IV drug use).',
+                riskFactors: 'Post-influenza viral infection (highly classic!), nursing homes, IV drug users.',
+                symptoms: 'Abrupt onset of high fever, productive cough with purulent or blood-tinged sputum, rapid clinical deterioration.',
+                anyaTelepathy: "Anya hears: 'I was finally recovering from the flu, but suddenly I got hit with a massive fever and I'm coughing up bright red blood...' (The post-viral threat!)",
+                loidTactical: "Twilight's Assessment: A highly opportunistic assassin. It waits for the influenza virus to destroy the airway defense, then strikes with necrotizing force. Frequently resistant (MRSA).",
+                yorSlice: "Thorn Princess Danger Scale: Critical. Carves out circular hollow holes (cavitary lesions and pneumatoceles) in the lung tissue.",
+                cxrDesc: 'Patchy bilateral bronchopneumonia with multiple rounded, thin-walled, air-filled cavities (pneumatoceles) and pleural effusions.',
+                ctDesc: 'Multiple well-defined cavitary nodules, areas of rapid parenchymal tissue necrosis, and pocketed pleural empyema.',
+                bondPrediction: "Bof! Bond predicts: ICU patient with sudden worsening of pneumonia right after recovering from the flu. Chest X-ray will show circular hollow cavities. Add Vancomycin or Linezolid! Borf!"
+            },
+            klebsiella: {
+                id: 'klebsiella',
+                name: 'Klebsiella pneumoniae',
+                type: 'Typical (Destructive)',
+                dangerLevel: '★★★★★',
+                gram: 'Gram-negative rod (Heavy mucoid capsule)',
+                microDetails: 'Lactose fermenter (MacConkey agar), urease-positive. Extremely thick, slimy mucoid capsule.',
+                transmission: 'Aspiration of oral cavity secretions colonized by enteric Gram-negative bacilli.',
+                riskFactors: 'Chronic alcohol use disorder, diabetes, malnourished individuals, aspiration risks.',
+                symptoms: 'Sudden onset of severe, necrotizing upper-lobe pneumonia, productive of thick, dark-red gelatinous "currant jelly" sputum.',
+                anyaTelepathy: "Anya hears: 'My chest feels so heavy, and my sputum is thick, sticky, and looks like dark red currant jelly...' (Aspiration of mouth flora!)",
+                loidTactical: "Twilight's Assessment: This bacteria produces a massive, slimy carbohydrate capsule. In chronic alcoholics, the epiglottic valve fails to close, allowing this destructive agent to seep directly into the upper lobes.",
+                yorSlice: "Thorn Princess Danger Scale: Lethal. The thick inflammatory fluid is so heavy it physically bends and bulges the lung fissures downward.",
+                cxrDesc: 'Dense right upper lobe consolidation with a prominent bowing/bulging of the minor (horizontal) fissure due to heavy, mucoid exudate.',
+                ctDesc: 'Large consolidation segment in the right upper lobe with early pocketed fluid collections representing rapid liquefactive tissue necrosis (abscesses).',
+                bondPrediction: "Bof! Bond predicts: A patient with chronic alcohol abuse coughing up thick red jelly. The X-ray shows a bulging horizontal fissure in the upper lobe. Borf!"
+            },
+            pseudomonas: {
+                id: 'pseudomonas',
+                name: 'Pseudomonas aeruginosa',
+                type: 'Atypical/Nosocomial',
+                dangerLevel: '★★★★★',
+                gram: 'Gram-negative rod (Sweet grape-like odor in lab, but deadly!)',
+                microDetails: 'Oxidase-positive, catalase-positive. Produces blue-green pigments (pyocyanin/pyoverdine).',
+                transmission: 'Water-loving environmental pathogen. Colonizes hospital ventilator circuits and respiratory tubes.',
+                riskFactors: 'Cystic fibrosis, bronchiectasis, neutropenia, mechanically ventilated patients (VAP).',
+                symptoms: 'High fever, toxic appearance, productive cough with greenish sputum, rapid descent into respiratory failure.',
+                anyaTelepathy: "Anya hears: 'The breathing machine is helping me, but now I have a new burning fever and my sputum is bright green...' (Water-loving hospital invader!)",
+                loidTactical: "Twilight's Assessment: A notoriously resistant pathogen that thrives in moist hospital environments. We must deploy anti-pseudomonal weapons: Piperacillin-tazobactam, Cefepime, or Meropenem.",
+                yorSlice: "Thorn Princess Danger Scale: Extreme. Can spread systemically to cause necrotic, black skin lesions called ecthyma gangrenosum.",
+                cxrDesc: 'Widespread, patchy, bilateral nodular bronchopneumonic infiltrates, frequently in lower lobes, often with micro-cavitations.',
+                ctDesc: 'Patchy consolidations, tree-in-bud nodularity, bronchial wall thickening, and areas of subpleural ground-glass density.',
+                bondPrediction: "Bof! Bond predicts: A patient with Cystic Fibrosis or on an ICU ventilator who suddenly develops pneumonia with greenish sputum. The agent is Pseudomonas! Borf!"
+            }
+        };
+
+        // Spy x Family Board Exam Practice Cases
+        const CASES = [
+            {
+                id: 1,
+                vignette: "A 48-year-old male with a history of severe chronic alcohol use is admitted to the medical ward. He was found disoriented, shivering, and breathing rapidly. On examination, he is febrile to 103°F. His breath sounds are significantly decreased in the right upper lung field. He is coughing up a highly characteristic, thick, dark-red gelatinous sputum that resembles currant jelly. A chest X-ray reveals a dense upper lobe consolidation with a prominent downward bowing of the horizontal fissure.",
+                options: [
+                    { key: 'A', text: 'Mycoplasma pneumoniae', pathogenId: 'mycoplasma' },
+                    { key: 'B', text: 'Klebsiella pneumoniae', pathogenId: 'klebsiella', correct: true },
+                    { key: 'C', text: 'Streptococcus pneumoniae', pathogenId: 'spneumo' },
+                    { key: 'D', text: 'Staphylococcus aureus', pathogenId: 'saureus' }
+                ],
+                explanation: "*(𓁹‿𓁹) Anya says: Heh! That's Klebsiella!* This patient is presenting with classic features of **Klebsiella pneumoniae** pneumonia. The key USMLE high-yield clues are: (1) **Alcohol use disorder** (which predisposes to aspiration of oral pharyngeal flora); (2) **Currant jelly sputum** (thick, dark red gelatinous sputum from necrosis and hemorrhage); and (3) **Bulging horizontal fissure** on chest X-ray caused by the heavy, thick mucoid capsule of the bacteria expanding the lobe. Upper lobe involvement is highly characteristic of aspiration.",
+                pearl: "Always suspect Klebsiella in alcoholics and diabetics with necrotizing upper-lobe consolidations!"
+            },
+            {
+                id: 2,
+                vignette: "A 69-year-old female presents to her primary care physician during winter with a 5-day history of high fever, severe generalized muscle aches, headache, and runny nose. She was starting to recover, but yesterday she developed a sudden relapse of shaking chills, a high fever of 104°F, and a cough productive of purulent sputum. Her chest X-ray shows patchy, bilateral infiltrates with multiple distinct, thin-walled, air-filled cavities in the lower lobes.",
+                options: [
+                    { key: 'A', text: 'Streptococcus pneumoniae', pathogenId: 'spneumo' },
+                    { key: 'B', text: 'Legionella pneumophila', pathogenId: 'legionella' },
+                    { key: 'C', text: 'Mycoplasma pneumoniae', pathogenId: 'mycoplasma' },
+                    { key: 'D', text: 'Staphylococcus aureus', pathogenId: 'saureus', correct: true }
+                ],
+                explanation: "*( ﾟДﾟ) Anya's mind reads: S. aureus is a sneaky post-viral assassin!* A classic board exam sequence is **influenza infection followed by sudden relapse** into bacterial pneumonia. *S. aureus* is notorious for causing a highly destructive, necrotizing pneumonia with **cavitary lesions (pneumatoceles)**, which are air-filled cysts visible on chest X-ray and CT scans. Under the microscope, these would appear as Gram-positive cocci in grape-like clusters.",
+                pearl: "Secondary bacterial pneumonia after the flu is most commonly S. pneumoniae, but S. aureus is highly tested due to its severe, necrotizing, cavitary nature!"
+            },
+            {
+                id: 3,
+                vignette: "A 58-year-old diplomat presents to the clinic with fever, non-productive cough, severe watery diarrhea, and confusion for 3 days. He recently returned from a high-level summit at a major luxury hotel in Westalis. Physical exam shows a temperature of 103.5°F, but his heart rate is only 60 bpm (relative bradycardia). Lab testing is significant for a serum sodium of 125 mEq/L and elevated liver transaminases (AST/ALT). His chest X-ray reveals an asymmetric, dense left lower lobe consolidation.",
+                options: [
+                    { key: 'A', text: 'Legionella pneumophila', pathogenId: 'legionella', correct: true },
+                    { key: 'B', text: 'Mycoplasma pneumoniae', pathogenId: 'mycoplasma' },
+                    { key: 'C', text: 'Pseudomonas aeruginosa', pathogenId: 'pseudomonas' },
+                    { key: 'D', text: 'Streptococcus pneumoniae', pathogenId: 'spneumo' }
+                ],
+                explanation: "*(。-`ω´-) Anya says: Water fountain germ makes your tummy hurt and sodium drop!* This presentation is highly specific for **Legionella pneumophila**. Important board exam clues include: (1) **Water source exposure** (hotel air conditioning or convention center plumbing); (2) **Gastrointestinal symptoms** (watery diarrhea); (3) **Neurological/systemic symptoms** (headache, confusion); (4) **Relative bradycardia** (high fever with slow pulse); and (5) **Hyponatremia** (low sodium, classically Na < 130). Legionella is an 'atypical' pathogen that causes severe 'atypical' lobar consolidation.",
+                pearl: "When a pneumonia vignette mentions diarrhea and low sodium, look for Legionella! Diagnose with a urine antigen test."
+            },
+            {
+                id: 4,
+                vignette: "A 20-year-old student at Eden Academy presents to the infirmary with a dry, hacking cough and a low-grade fever that started 2 weeks ago. He has also been complaining of mild ear pain and a generalized headache but has been able to attend his classes. On physical exam, he appears well and in no distress. Chest examination reveals scattered wheezes but no bronchial breath sounds or dullness. However, his chest X-ray shows extensive, diffuse bilateral interstitial infiltrates radiating from both hila.",
+                options: [
+                    { key: 'A', text: 'Streptococcus pneumoniae', pathogenId: 'spneumo' },
+                    { key: 'B', text: 'Mycoplasma pneumoniae', pathogenId: 'mycoplasma', correct: true },
+                    { key: 'C', text: 'Klebsiella pneumoniae', pathogenId: 'klebsiella' },
+                    { key: 'D', text: 'Pseudomonas aeruginosa', pathogenId: 'pseudomonas' }
+                ],
+                explanation: "*(๑•̀ㅂ•́)و Anya says: Walking pneumonia is for school dorms!* This is a textbook case of 'walking pneumonia' caused by **Mycoplasma pneumoniae**. It is the most common cause of pneumonia in young adults (military recruits, college students living in dorms). The clinical presentation is classically mild (low-grade fever, dry cough, patient is walking around), but the **chest X-ray looks far worse** than the patient's actual clinical status, showing diffuse bilateral interstitial markings. It is also associated with bullous myringitis (blisters on the eardrum) and cold agglutinins (IgM antibodies against red blood cells).",
+                pearl: "Because Mycoplasma lack a peptidoglycan cell wall, they are completely invisible on Gram stain and resistant to penicillins! Use macrolides (Azithromycin)."
+            }
+        ];
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('radiology');
+            const [selectedPathogen, setSelectedPathogen] = useState('spneumo');
+            const [scanType, setScanType] = useState('cxr'); // 'cxr' or 'ct'
+            const [showOverlay, setShowOverlay] = useState(true);
+            const [quizIndex, setQuizIndex] = useState(0);
+            const [selectedOption, setSelectedOption] = useState(null);
+            const [quizAnswered, setQuizAnswered] = useState(false);
+            const [stellaCount, setStellaCount] = useState(0);
+            const [tonitrusCount, setTonitrusCount] = useState(0);
+            
+            // CURB-65 Calculator State
+            const [curb, setCurb] = useState({
+                confusion: false,
+                urea: false,
+                respRate: false,
+                bp: false,
+                age: false
+            });
+
+            // Interactive Differential Matrix Filter State
+            const [diffFilter, setDiffFilter] = useState({
+                risk: 'all',
+                sputum: 'all',
+                lab: 'all'
+            });
+
+            const pathogen = PATHOGENS[selectedPathogen];
+
+            const curbScore = useMemo(() => {
+                let score = 0;
+                if (curb.confusion) score++;
+                if (curb.urea) score++;
+                if (curb.respRate) score++;
+                if (curb.bp) score++;
+                if (curb.age) score++;
+                return score;
+            }, [curb]);
+
+            const curbRecommendation = useMemo(() => {
+                if (curbScore <= 1) {
+                    return {
+                        level: "Low Risk (Stella Potential!)",
+                        action: "Outpatient Management (Home Mission)",
+                        color: "text-emerald-400 border-emerald-950 bg-emerald-950/20",
+                        desc: "Twilight advises: Safe for home recovery. Prescribe amoxicillin or doxycycline/macrolide. Let Anya monitor them!"
+                    };
+                } else if (curbScore === 2) {
+                    return {
+                        level: "Moderate Risk (Caution Advised)",
+                        action: "Inpatient Ward Admission or Close Supervision",
+                        color: "text-amber-400 border-amber-950 bg-amber-950/20",
+                        desc: "Twilight advises: Consider short-stay inpatient admission. Deploy dual therapy (Beta-lactam + Macrolide) to neutralize all typical & atypical pathways."
+                    };
+                } else {
+                    return {
+                        level: "Severe Risk (Expulsion Threat / Critical)",
+                        action: "Urgent Hospitalization & Immediate ICU Admission",
+                        color: "text-rose-400 border-rose-950 bg-rose-950/20",
+                        desc: "Twilight advises: Critical threat! Secure an ICU bed immediately. Administer broad-spectrum coverage to prevent septic shock."
+                    };
+                }
+            }, [curbScore]);
+
+            const filteredPathogens = useMemo(() => {
+                return Object.values(PATHOGENS).filter(p => {
+                    let matchRisk = true;
+                    let matchSputum = true;
+                    let matchLab = true;
+
+                    if (diffFilter.risk !== 'all') {
+                        const r = diffFilter.risk;
+                        if (r === 'alcohol') matchRisk = p.riskFactors.toLowerCase().includes('alcohol') || p.id === 'klebsiella';
+                        if (r === 'flu') matchRisk = p.riskFactors.toLowerCase().includes('influenza') || p.id === 'saureus';
+                        if (r === 'young') matchRisk = p.riskFactors.toLowerCase().includes('young') || p.id === 'mycoplasma';
+                        if (r === 'cystic') matchRisk = p.riskFactors.toLowerCase().includes('cystic') || p.id === 'pseudomonas';
+                        if (r === 'water') matchRisk = p.transmission.toLowerCase().includes('water') || p.id === 'legionella';
+                    }
+
+                    if (diffFilter.sputum !== 'all') {
+                        const s = diffFilter.sputum;
+                        if (s === 'rust') matchSputum = p.symptoms.toLowerCase().includes('rust');
+                        if (s === 'currant') matchSputum = p.symptoms.toLowerCase().includes('currant');
+                        if (s === 'green') matchSputum = p.symptoms.toLowerCase().includes('green') || p.id === 'pseudomonas';
+                        if (s === 'dry') matchSputum = p.symptoms.toLowerCase().includes('dry') || p.symptoms.toLowerCase().includes('non-productive');
+                    }
+
+                    if (diffFilter.lab !== 'all') {
+                        const l = diffFilter.lab;
+                        if (l === 'sodium') matchLab = p.anyaTelepathy.toLowerCase().includes('hyponatremia') || p.id === 'legionella';
+                        if (l === 'cold') matchLab = p.microDetails.toLowerCase().includes('cold agglutinins') || p.id === 'mycoplasma';
+                        if (l === 'clusters') matchLab = p.gram.toLowerCase().includes('clusters') || p.id === 'saureus';
+                        if (l === 'capsule') matchLab = p.microDetails.toLowerCase().includes('capsule') || p.id === 'klebsiella';
+                    }
+
+                    return matchRisk && matchSputum && matchLab;
+                });
+            }, [diffFilter]);
+
+            const handleQuizAnswer = (option) => {
+                if (quizAnswered) return;
+                setSelectedOption(option);
+                setQuizAnswered(true);
+                if (option.correct) {
+                    setStellaCount(prev => prev + 1);
+                } else {
+                    setTonitrusCount(prev => prev + 1);
+                }
+            };
+
+            const nextQuizQuestion = () => {
+                setSelectedOption(null);
+                setQuizAnswered(false);
+                setQuizIndex(prev => (prev + 1) % CASES.length);
+            };
+
+            const resetQuiz = () => {
+                setSelectedOption(null);
+                setQuizAnswered(false);
+                setQuizIndex(0);
+                setStellaCount(0);
+                setTonitrusCount(0);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col bg-spy-base text-slate-200">
+                    
+                    {/* Spy Header with Gold Trim */}
+                    <header className="border-b-2 border-spy-gold bg-spy-panel/90 backdrop-blur-md sticky top-0 z-50 px-4 py-4 md:px-8 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-xl">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-gradient-to-tr from-spy-gold to-yellow-600 p-2.5 rounded-xl shadow-lg border border-spy-gold/40">
+                                <span className="text-xl font-bold text-spy-base">𓁹</span>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2 title-font">
+                                    Operation Strix <span className="text-xs px-2 py-0.5 rounded bg-spy-gold text-spy-base font-bold uppercase tracking-wider mono">Eden Academy Medical Division</span>
+                                </h1>
+                                <p className="text-xs text-spy-pink font-semibold tracking-wider">Anya's Mind-Reading Diagnostic & Radiology Lightbox</p>
+                            </div>
+                        </div>
+                        
+                        {/* Tab Switchers styled like classified agency tabs */}
+                        <div className="flex flex-wrap bg-spy-base/80 p-1.5 rounded-xl border border-spy-border self-start xl:self-auto">
+                            <button 
+                                onClick={() => setActiveTab('radiology')}
+                                className={`px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'radiology' ? 'bg-spy-gold text-spy-base shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                🩻 Spy Radiology Lab
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('matrix')}
+                                className={`px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'matrix' ? 'bg-spy-gold text-spy-base shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                🗝️ Top-Secret Decrypter Matrix
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('curb')}
+                                className={`px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'curb' ? 'bg-spy-gold text-spy-base shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                📈 Strix Triage (CURB-65)
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('quiz')}
+                                className={`px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'quiz' ? 'bg-spy-gold text-spy-base shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                🎓 Midterm Exam (Practice)
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Main content wrapper */}
+                    <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6">
+                        
+                        {/* School/Spy Stats Header */}
+                        <div className="flex items-center justify-between bg-spy-panel/40 border border-spy-border p-4 rounded-2xl">
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">🥜</span>
+                                <p className="text-xs text-slate-300 font-light max-w-md">
+                                    Anya is assisting Twilight's mission to analyze lung pathology! Earn **Stella Stars** for perfect diagnoses and avoid **Tonitrus Bolts**.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-1.5 bg-yellow-950/40 px-3 py-1.5 rounded-xl border border-yellow-800/40">
+                                    <span className="text-amber-400 text-lg">⭐</span>
+                                    <span className="text-xs font-bold font-mono text-amber-300">Stellas: {stellaCount}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 bg-rose-950/40 px-3 py-1.5 rounded-xl border border-rose-800/40">
+                                    <span className="text-rose-400 text-lg">⚡</span>
+                                    <span className="text-xs font-bold font-mono text-rose-300">Tonitrus: {tonitrusCount}/8</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Tab Content 1: Interactive Radiology Lab */}
+                        {activeTab === 'radiology' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                                
+                                {/* Left Side: Selector & Clinical profile of selected pathogen */}
+                                <div className="lg:col-span-5 space-y-6">
+                                    <div className="bg-spy-panel p-5 rounded-2xl border border-spy-border shadow-xl space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h2 className="text-sm font-bold uppercase tracking-wider text-spy-gold flex items-center gap-2">
+                                                <span>🎯 Target Pathogen</span>
+                                            </h2>
+                                            <span className="text-[10px] bg-slate-800 text-spy-pink px-2 py-0.5 rounded font-mono font-bold">Waku Waku!</span>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+                                            {Object.entries(PATHOGENS).map(([key, item]) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => setSelectedPathogen(key)}
+                                                    className={`p-3 rounded-xl border text-left transition-all ${selectedPathogen === key ? 'bg-gradient-to-b from-teal-950/40 to-teal-900/20 border-spy-gold text-white shadow-lg' : 'bg-spy-base/60 border-spy-border hover:border-slate-700 hover:bg-spy-panel/40'}`}
+                                                >
+                                                    <div className="text-xs font-bold truncate text-spy-gold">{item.name.split(' ')[0]}</div>
+                                                    <div className="text-[10px] text-slate-400 truncate italic">{item.name.split(' ')[1]}</div>
+                                                    <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.2 rounded font-semibold ${item.type === 'Typical' ? 'bg-blue-950 text-blue-400' : 'bg-purple-950 text-purple-400'}`}>
+                                                        {item.type}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* High Yield Profile Card */}
+                                    <div className="bg-spy-panel rounded-2xl border border-spy-border overflow-hidden shadow-xl">
+                                        <div className="p-5 border-b border-spy-border bg-spy-base/30">
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${pathogen.type === 'Typical' ? 'bg-blue-950/80 text-blue-400 border border-blue-900' : 'bg-purple-950/80 text-purple-400 border border-purple-900'}`}>
+                                                        {pathogen.type} Pneumonia Threat
+                                                    </span>
+                                                    <h3 className="text-2xl font-bold mt-2 text-white italic title-font">{pathogen.name}</h3>
+                                                    <div className="text-xs text-spy-gold mt-1">Yor's Danger Scale: <span className="font-mono text-rose-500 font-bold">{pathogen.dangerLevel}</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-5 space-y-4 text-sm">
+                                            
+                                            {/* ANYA'S TELEPATHIC CLUE - HIGHLIGHTED */}
+                                            <div className="bg-pink-950/20 p-4 rounded-xl border border-pink-900/40 space-y-2 relative overflow-hidden waku-waku-pulse">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-lg">𓁹‿𓁹</span>
+                                                    <h4 className="text-xs font-black text-spy-pink uppercase tracking-widest">Anya's Mind-Reading Clue</h4>
+                                                </div>
+                                                <p className="text-xs text-rose-200 italic leading-relaxed font-medium">"{pathogen.anyaTelepathy}"</p>
+                                            </div>
+
+                                            <div>
+                                                <h4 className="text-xs font-bold text-spy-gold uppercase tracking-wider mb-1">Microbiology Profile</h4>
+                                                <p className="text-slate-300"><span className="text-spy-pink font-semibold">Stain & Morph:</span> {pathogen.gram}</p>
+                                                <p className="text-slate-400 text-xs italic mt-0.5">{pathogen.microDetails}</p>
+                                            </div>
+
+                                            <div>
+                                                <h4 className="text-xs font-bold text-spy-gold uppercase tracking-wider mb-1">Twilight's Intelligence Assessment</h4>
+                                                <p className="text-slate-300 text-xs font-light leading-relaxed bg-spy-base/40 p-2.5 rounded-lg border border-spy-border">{pathogen.loidTactical}</p>
+                                            </div>
+
+                                            <div>
+                                                <h4 className="text-xs font-bold text-spy-gold uppercase tracking-wider mb-1">Thorn Princess Combat Damage (Yor)</h4>
+                                                <p className="text-slate-400 text-xs italic leading-relaxed">{pathogen.yorSlice}</p>
+                                            </div>
+
+                                            {/* BOND'S PROPHESY - HIGH YIELD EXAM PREDICTION */}
+                                            <div className="pt-3 border-t border-spy-border bg-spy-base/30 p-3 rounded-xl border border-dashed border-spy-border">
+                                                <h4 className="text-xs font-bold text-spy-gold uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                                    <span className="text-lg">🐶</span>
+                                                    Bond's Board Exam Prediction
+                                                </h4>
+                                                <p className="text-xs text-slate-300 font-light leading-relaxed">{pathogen.bondPrediction}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Side: Dynamic SVG Radiology Lightbox styled like Spy classified files */}
+                                <div className="lg:col-span-7 space-y-6">
+                                    <div className="bg-spy-panel border border-spy-border rounded-2xl p-5 shadow-2xl relative flex flex-col">
+                                        
+                                        {/* Viewer Header */}
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-spy-border mb-4">
+                                            <div>
+                                                <span className="text-[10px] font-mono tracking-wider text-spy-gold uppercase font-semibold">Classified Intelligence Diagnostics</span>
+                                                <h3 className="text-base font-bold text-white">Target Lung Radiograph Lightbox</h3>
+                                            </div>
+
+                                            <div className="flex items-center gap-4">
+                                                {/* Scan type switch */}
+                                                <div className="flex bg-spy-base p-1 rounded-lg border border-spy-border">
+                                                    <button
+                                                        onClick={() => setScanType('cxr')}
+                                                        className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${scanType === 'cxr' ? 'bg-spy-gold text-spy-base' : 'text-slate-400 hover:text-slate-200'}`}
+                                                    >
+                                                        Chest X-Ray
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setScanType('ct')}
+                                                        className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${scanType === 'ct' ? 'bg-spy-gold text-spy-base' : 'text-slate-400 hover:text-slate-200'}`}
+                                                    >
+                                                        Chest CT
+                                                    </button>
+                                                </div>
+
+                                                {/* Overlay Toggle */}
+                                                <button
+                                                    onClick={() => setShowOverlay(!showOverlay)}
+                                                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${showOverlay ? 'bg-teal-950/50 border-spy-gold text-spy-gold' : 'bg-spy-base border-spy-border text-slate-400'}`}
+                                                >
+                                                    {showOverlay ? 'Pathology Scan: ON' : 'Pathology Scan: OFF'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* SVG Radiology Box Container with Scanner Effect */}
+                                        <div className="bg-black border border-spy-border rounded-xl overflow-hidden aspect-square flex items-center justify-center p-2 relative shadow-inner scanner">
+                                            {scanType === 'cxr' ? (
+                                                /* ----------------- CHEST X-RAY SVG SIMULATION ----------------- */
+                                                <svg viewBox="0 0 400 400" className="w-full h-full text-slate-400 select-none">
+                                                    {/* Background deep tissue dark air space */}
+                                                    <rect width="400" height="400" fill="#070c0c" />
+                                                    
+                                                    {/* Spine Column */}
+                                                    <rect x="194" y="30" width="12" height="340" fill="#2d3748" opacity="0.35" />
+                                                    <path d="M 194,30 L 206,30 L 200,45 Z" fill="#3e4a5e" />
+                                                    {/* Vertebral segments */}
+                                                    {Array.from({length: 15}).map((_, i) => (
+                                                        <rect key={i} x="192" y="45 + i*22" width="16" height="8" rx="1" fill="#475569" opacity="0.4" />
+                                                    ))}
+
+                                                    {/* Ribcage back */}
+                                                    {Array.from({length: 8}).map((_, i) => {
+                                                        const y = 80 + i*35;
+                                                        return (
+                                                            <g key={i} opacity="0.15" stroke="#ffffff" strokeWidth="2" fill="none">
+                                                                <path d={`M 200,${y} Q 320,${y+10} 360,${y+40}`} />
+                                                                <path d={`M 200,${y} Q 80,${y+10} 40,${y+40}`} />
+                                                            </g>
+                                                        );
+                                                    })}
+
+                                                    {/* Clearer Lung Silhouettes */}
+                                                    <path d="M 208,80 C 230,50 350,60 365,180 C 375,280 355,340 350,350 C 310,320 250,330 208,340 Z" fill="#020505" stroke="#1b3f3a" strokeWidth="1" />
+                                                    <path d="M 192,80 C 170,50 50,60 35,180 C 25,280 45,340 50,350 C 90,320 150,330 192,340 Z" fill="#020505" stroke="#1b3f3a" strokeWidth="1" />
+
+                                                    {/* Clavicles */}
+                                                    <path d="M 195,75 Q 280,70 355,90" stroke="#64748b" strokeWidth="6" fill="none" opacity="0.6" strokeLinecap="round" />
+                                                    <path d="M 205,75 Q 120,70 45,90" stroke="#64748b" strokeWidth="6" fill="none" opacity="0.6" strokeLinecap="round" />
+
+                                                    {/* Ribcage front */}
+                                                    {Array.from({length: 9}).map((_, i) => {
+                                                        const y = 90 + i*28;
+                                                        return (
+                                                            <g key={i} opacity="0.3" stroke="#cbd5e1" strokeWidth="3.5" fill="none">
+                                                                <path d={`M 196,${y} Q 330,${y-10} 370,${y+25}`} />
+                                                                <path d={`M 204,${y} Q 70,${y-10} 30,${y+25}`} />
+                                                            </g>
+                                                        );
+                                                    })}
+
+                                                    {/* Mediastinum / Heart Silhouette */}
+                                                    <path d="M 190,100 C 180,120 160,150 150,200 C 145,240 180,310 200,325 C 220,325 240,320 255,290 C 265,270 260,210 235,180 C 215,150 210,120 210,100 Z" fill="#334155" stroke="#475569" strokeWidth="2" opacity="0.8" />
+                                                    
+                                                    {/* Diaphragm */}
+                                                    <path d="M 200,320 Q 280,300 370,340 L 370,380 L 200,380 Z" fill="#1b3f3a" opacity="0.9" />
+                                                    <path d="M 30,340 Q 110,290 200,320 L 200,380 L 30,380 Z" fill="#1b3f3a" opacity="0.9" />
+
+                                                    {/* Trachea */}
+                                                    <rect x="195" y="40" width="10" height="90" fill="#020505" stroke="#334155" strokeWidth="1" opacity="0.9" />
+
+                                                    {/* ---------------- PATHOLOGICAL OVERLAYS ---------------- */}
+                                                    {showOverlay && (
+                                                        <g>
+                                                            {selectedPathogen === 'spneumo' && (
+                                                                /* S. Pneumo: Classic Right lower/middle lobe consolidation (Viewer's Left) */
+                                                                <g>
+                                                                    <path d="M 50,320 Q 110,285 190,315 C 190,260 160,220 110,210 C 60,210 50,260 50,320 Z" fill="url(#consolidationGrad)" opacity="0.8" className="pulse-pathology" />
+                                                                    {/* Air bronchograms */}
+                                                                    <path d="M 100,240 L 110,270 M 110,270 L 100,295 M 110,270 L 130,290 M 130,290 L 125,310" stroke="#020505" strokeWidth="2" fill="none" strokeLinecap="round" />
+                                                                    
+                                                                    {/* Hotspot Marker */}
+                                                                    <circle cx="110" cy="265" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="125" y="270" fill="#dfb15b" fontSize="10" fontWeight="bold">S. Pneumoniae Lobar Fill</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'mycoplasma' && (
+                                                                /* Mycoplasma: Bilateral diffuse, patchy, wispy interstitial lines */
+                                                                <g>
+                                                                    <path d="M 60,120 Q 120,150 180,180 M 80,180 Q 140,190 180,220 M 70,250 Q 130,230 180,260" stroke="#f1f5f9" strokeWidth="2" strokeDasharray="3,3" fill="none" opacity="0.65" />
+                                                                    <path d="M 340,120 Q 280,150 220,180 M 320,180 Q 260,190 220,220 M 330,250 Q 270,230 220,260" stroke="#f1f5f9" strokeWidth="2" strokeDasharray="3,3" fill="none" opacity="0.65" />
+                                                                    
+                                                                    {/* Hotspot Marker */}
+                                                                    <circle cx="280" cy="180" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="190" y="150" fill="#dfb15b" fontSize="10" fontWeight="bold">Diffuse Interstitial Patterns</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'legionella' && (
+                                                                /* Legionella: Dense unilateral consolidation, patchy style */
+                                                                <g>
+                                                                    <path d="M 215,200 C 250,180 340,180 345,280 C 345,310 260,335 215,315 Z" fill="url(#consolidationGrad)" opacity="0.85" className="pulse-pathology" />
+                                                                    
+                                                                    {/* Hotspot Marker */}
+                                                                    <circle cx="290" cy="250" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="215" y="225" fill="#dfb15b" fontSize="10" fontWeight="bold">Asymmetric Lobar Infiltration</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'saureus' && (
+                                                                /* S. Aureus: Patchy multi-lobar infiltrates + circular hollow cavitary lesions */
+                                                                <g>
+                                                                    <path d="M 60,150 C 90,140 120,160 110,190 C 80,195 60,180 60,150 Z" fill="#e2e8f0" opacity="0.6" />
+                                                                    <path d="M 250,220 C 290,200 330,220 330,260 Z" fill="#e2e8f0" opacity="0.6" />
+                                                                    
+                                                                    {/* Cavity 1 */}
+                                                                    <circle cx="95" cy="170" r="14" fill="#020505" stroke="#dfb15b" strokeWidth="3" />
+                                                                    {/* Cavity 2 */}
+                                                                    <circle cx="295" cy="240" r="18" fill="#020505" stroke="#dfb15b" strokeWidth="3" />
+                                                                    
+                                                                    {/* Hotspot Marker */}
+                                                                    <circle cx="295" cy="240" r="7" fill="#e11d48" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="215" y="195" fill="#e11d48" fontSize="10" fontWeight="bold">Yor's Cavitation (Pneumatocele)</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'klebsiella' && (
+                                                                /* Klebsiella: Dense Upper lobe consolidation with downward bowed horizontal fissure */
+                                                                <g>
+                                                                    <path d="M 50,110 C 60,65 160,65 185,110 C 185,160 185,200 185,200 Q 110,215 50,195 Z" fill="url(#consolidationGrad)" opacity="0.85" className="pulse-pathology" />
+                                                                    {/* Fissure line sharply curving down */}
+                                                                    <path d="M 50,195 Q 110,215 185,200" stroke="#dfb15b" strokeWidth="4" fill="none" />
+                                                                    
+                                                                    {/* Hotspot Marker */}
+                                                                    <circle cx="120" cy="180" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="60" y="235" fill="#dfb15b" fontSize="10" fontWeight="bold">Heavy Bowed Upper Lobe Fissure</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'pseudomonas' && (
+                                                                /* Pseudomonas: Patchy bronchopneumonia, lower lobes bilateral with tiny microcavitations */
+                                                                <g>
+                                                                    <path d="M 230,250 C 260,240 330,245 340,300 C 310,320 230,310 230,250 Z" fill="url(#consolidationGrad)" opacity="0.7" />
+                                                                    <circle cx="280" cy="285" r="5" fill="#020505" stroke="#e2e8f0" strokeWidth="1.5" />
+
+                                                                    <path d="M 60,260 C 90,250 160,250 170,300 C 140,320 60,310 60,260 Z" fill="url(#consolidationGrad)" opacity="0.7" />
+                                                                    <circle cx="110" cy="290" r="5" fill="#020505" stroke="#e2e8f0" strokeWidth="1.5" />
+
+                                                                    {/* Hotspot Marker */}
+                                                                    <circle cx="280" cy="285" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="210" y="215" fill="#dfb15b" fontSize="10" fontWeight="bold">Green Bronchopneumonia</text>
+                                                                </g>
+                                                            )}
+                                                        </g>
+                                                    )}
+
+                                                    {/* Gradients */}
+                                                    <defs>
+                                                        <radialGradient id="consolidationGrad" cx="50%" cy="50%" r="50%">
+                                                            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9"/>
+                                                            <stop offset="70%" stopColor="#dfb15b" stopOpacity="0.3"/>
+                                                            <stop offset="100%" stopColor="#1b3f3a" stopOpacity="0"/>
+                                                        </radialGradient>
+                                                    </defs>
+                                                </svg>
+                                            ) : (
+                                                /* ----------------- CT SCAN INTERACTIVE SVG ----------------- */
+                                                <svg viewBox="0 0 400 400" className="w-full h-full text-slate-400 select-none">
+                                                    <rect width="400" height="400" fill="#050a0a" />
+                                                    
+                                                    {/* Exterior Thoracic Body Outline */}
+                                                    <path d="M 200,40 C 280,40 370,80 370,180 C 370,280 310,340 200,345 C 90,340 30,280 30,180 C 30,80 120,40 200,40 Z" fill="#1b3f3a" opacity="0.3" stroke="#dfb15b" strokeWidth="2" />
+                                                    
+                                                    {/* Spine Vertebra bone */}
+                                                    <g transform="translate(160, 305)" fill="#e2e8f0" opacity="0.8">
+                                                        <path d="M 10,15 C 20,5 60,5 70,15 C 80,25 75,35 60,35 C 50,32 30,32 20,35 C 5,35 0,25 10,15 Z" />
+                                                        <path d="M 40,30 L 40,55 M 15,25 L -5,35 M 65,25 L 85,35" stroke="#e2e8f0" strokeWidth="3" />
+                                                    </g>
+
+                                                    {/* Sternum bone */}
+                                                    <rect x="185" y="48" width="30" height="10" rx="3" fill="#e2e8f0" opacity="0.8" />
+
+                                                    {/* Lung cavities */}
+                                                    <path d="M 215,90 C 230,85 320,110 335,180 C 345,240 280,290 220,290 C 210,260 215,160 215,90 Z" fill="#020505" stroke="#1b3f3a" strokeWidth="2" />
+                                                    <path d="M 185,90 C 170,85 80,110 65,180 C 55,240 120,290 180,290 C 190,260 185,160 185,90 Z" fill="#020505" stroke="#1b3f3a" strokeWidth="2" />
+
+                                                    {/* Heart & Major Vessels */}
+                                                    <path d="M 170,120 C 170,95 230,95 230,120 C 240,150 230,220 200,220 C 170,220 160,150 170,120 Z" fill="#334155" stroke="#475569" strokeWidth="2" />
+
+                                                    {/* ---------------- PATHOLOGICAL OVERLAYS ---------------- */}
+                                                    {showOverlay && (
+                                                        <g>
+                                                            {selectedPathogen === 'spneumo' && (
+                                                                <g>
+                                                                    <path d="M 120,190 C 140,190 180,230 175,275 C 135,290 85,275 80,230 Z" fill="url(#consolidationGrad)" opacity="0.85" className="pulse-pathology" />
+                                                                    {/* Air bronchograms */}
+                                                                    <path d="M 130,215 L 145,245 M 145,245 L 135,270" stroke="#020505" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                                                                    
+                                                                    {/* Hotspot */}
+                                                                    <circle cx="140" cy="240" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="65" y="175" fill="#dfb15b" fontSize="10" fontWeight="bold">CT Air Bronchogram</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'mycoplasma' && (
+                                                                <g>
+                                                                    <path d="M 90,120 C 110,110 140,130 135,160 Z" fill="#ffffff" opacity="0.4" />
+                                                                    <path d="M 265,200 C 295,190 320,210 315,245 Z" fill="#ffffff" opacity="0.4" />
+                                                                    <circle cx="105" cy="140" r="3" fill="#ffffff" />
+                                                                    <circle cx="280" cy="220" r="3" fill="#ffffff" />
+
+                                                                    {/* Hotspot */}
+                                                                    <circle cx="115" cy="145" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="60" y="200" fill="#dfb15b" fontSize="10" fontWeight="bold">Ground-Glass Shadows (GGO)</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'legionella' && (
+                                                                <g>
+                                                                    <path d="M 235,160 C 275,140 330,165 325,230 Z" fill="url(#consolidationGrad)" opacity="0.85" className="pulse-pathology" />
+                                                                    <path d="M 260,285 Q 295,280 320,245 Z" fill="#cbd5e1" opacity="0.8" />
+                                                                    
+                                                                    {/* Hotspot */}
+                                                                    <circle cx="295" cy="265" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="215" y="115" fill="#dfb15b" fontSize="10" fontWeight="bold">Consolidation & Fluid Spill</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'saureus' && (
+                                                                <g>
+                                                                    <circle cx="120" cy="160" r="18" fill="#020505" stroke="#dfb15b" strokeWidth="4" />
+                                                                    <circle cx="280" cy="180" r="24" fill="#020505" stroke="#dfb15b" strokeWidth="4" />
+                                                                    
+                                                                    {/* Hotspot */}
+                                                                    <circle cx="280" cy="180" r="7" fill="#e11d48" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="210" y="130" fill="#e11d48" fontSize="10" fontWeight="bold">Severe Necrotic Cavitation</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'klebsiella' && (
+                                                                <g>
+                                                                    <path d="M 70,160 C 80,105 160,110 180,150 C 180,210 120,240 85,210 Z" fill="url(#consolidationGrad)" opacity="0.9" className="pulse-pathology" />
+                                                                    <ellipse cx="120" cy="160" rx="12" ry="7" fill="#020505" stroke="#94a3b8" strokeWidth="1" />
+                                                                    
+                                                                    {/* Hotspot */}
+                                                                    <circle cx="120" cy="160" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="65" y="245" fill="#dfb15b" fontSize="10" fontWeight="bold">Liquefactive Mucus Pockets</text>
+                                                                </g>
+                                                            )}
+
+                                                            {selectedPathogen === 'pseudomonas' && (
+                                                                <g>
+                                                                    <circle cx="115" cy="245" r="9" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                                                                    <circle cx="115" cy="245" r="5" fill="#020505" />
+
+                                                                    <circle cx="280" cy="245" r="9" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                                                                    <circle cx="280" cy="245" r="5" fill="#020505" />
+
+                                                                    {/* Hotspot */}
+                                                                    <circle cx="280" cy="245" r="7" fill="#dfb15b" stroke="#ffffff" strokeWidth="2" className="marker-glow cursor-pointer" />
+                                                                    <text x="210" y="215" fill="#dfb15b" fontSize="10" fontWeight="bold">Thickened Bronchial Pipelines</text>
+                                                                </g>
+                                                            )}
+                                                        </g>
+                                                    )}
+                                                </svg>
+                                            )}
+                                        </div>
+
+                                        {/* Description of what they are looking at */}
+                                        <div className="bg-spy-base/80 p-4 rounded-xl border border-spy-border">
+                                            <h4 className="text-xs font-bold text-spy-gold uppercase tracking-widest mb-1">
+                                                {scanType === 'cxr' ? 'Twilight AP Chest Radiogram View' : 'High-Resolution Axial Chest Slice CT'}
+                                            </h4>
+                                            <p className="text-sm text-slate-300 font-light leading-relaxed">
+                                                {scanType === 'cxr' ? pathogen.cxrDesc : pathogen.ctDesc}
+                                            </p>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tab Content 2: Top-Secret Decrypter Matrix */}
+                        {activeTab === 'matrix' && (
+                            <div className="space-y-6">
+                                <div className="bg-spy-panel p-6 rounded-2xl border border-spy-border shadow-xl">
+                                    <h2 className="text-lg font-bold text-spy-gold mb-2 title-font">Secret Cipher Diagnostic Matcher</h2>
+                                    <p className="text-sm text-slate-400 max-w-3xl mb-6">
+                                        Filter pathogen records instantly using intelligence markers. Select patient background, sputum traits, and unusual lab indices to narrow down the target suspect.
+                                    </p>
+
+                                    {/* Selectors Row */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        
+                                        {/* Risk Factor Filter */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-spy-pink uppercase tracking-widest">Suspect Risk Profile</label>
+                                            <select 
+                                                value={diffFilter.risk}
+                                                onChange={(e) => setDiffFilter({...diffFilter, risk: e.target.value})}
+                                                className="w-full bg-spy-base border border-spy-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-spy-gold text-slate-200"
+                                            >
+                                                <option value="all">Any Risk Profile / Setting</option>
+                                                <option value="alcohol">Alcohol Use (Impaired Airway Guard)</option>
+                                                <option value="flu">Post-Influenza Viral Invasion</option>
+                                                <option value="young">Young Student living in Eden Dorms</option>
+                                                <option value="cystic">Cystic Fibrosis / ICU Ventilator Dependent</option>
+                                                <option value="water">Exposure to Coolant Water Systems</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Sputum Filter */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-spy-pink uppercase tracking-widest">Sputum Traits</label>
+                                            <select 
+                                                value={diffFilter.sputum}
+                                                onChange={(e) => setDiffFilter({...diffFilter, sputum: e.target.value})}
+                                                className="w-full bg-spy-base border border-spy-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-spy-gold text-slate-200"
+                                            >
+                                                <option value="all">Any Secretions Style</option>
+                                                <option value="rust">Rust-Colored Sputum</option>
+                                                <option value="currant">"Currant Jelly" Sticky Dark Red</option>
+                                                <option value="green">Bright Greenish Exudate</option>
+                                                <option value="dry">Dry / Hacking Non-productive</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Lab Markers Filter */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-spy-pink uppercase tracking-widest">Classified Lab Findings</label>
+                                            <select 
+                                                value={diffFilter.lab}
+                                                onChange={(e) => setDiffFilter({...diffFilter, lab: e.target.value})}
+                                                className="w-full bg-spy-base border border-spy-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-spy-gold text-slate-200"
+                                            >
+                                                <option value="all">Any Special Lab Clue</option>
+                                                <option value="sodium">Severe Hyponatremia (Sodium &lt; 130)</option>
+                                                <option value="cold">Positive Cold Agglutinins (IgM)</option>
+                                                <option value="clusters">Gram-positive Grape Clusters</option>
+                                                <option value="capsule">Thick Mucoid Polysaccharide Capsule</option>
+                                            </select>
+                                        </div>
+
+                                    </div>
+
+                                    {/* Reset Filters button */}
+                                    <div className="mt-4 flex justify-end">
+                                        <button 
+                                            onClick={() => setDiffFilter({risk: 'all', sputum: 'all', lab: 'all'})}
+                                            className="text-xs text-spy-gold hover:text-yellow-400 font-semibold"
+                                        >
+                                            Clear Decrypter Filters
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Results Grid */}
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Identified Targets ({filteredPathogens.length})</h3>
+                                    
+                                    {filteredPathogens.length === 0 ? (
+                                        <div className="bg-spy-panel/30 border border-spy-border rounded-2xl p-12 text-center">
+                                            <p className="text-slate-400 text-sm">No pathogen matches this exact intelligence filter profile.</p>
+                                            <button 
+                                                onClick={() => setDiffFilter({risk: 'all', sputum: 'all', lab: 'all'})}
+                                                className="mt-4 px-4 py-2 bg-spy-gold text-spy-base rounded-xl text-xs font-bold"
+                                            >
+                                                Reset Filters
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {filteredPathogens.map(p => (
+                                                <div key={p.id} className="bg-spy-panel border border-spy-border rounded-2xl p-5 space-y-4 relative overflow-hidden flex flex-col justify-between shadow-xl">
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${p.type === 'Typical' ? 'bg-blue-950 text-blue-400' : 'bg-purple-950 text-purple-400'}`}>
+                                                                {p.type} Target
+                                                            </span>
+                                                            <span className="text-[11px] font-mono text-slate-500 font-bold">DOSSIER: {p.id.toUpperCase()}</span>
+                                                        </div>
+                                                        <h4 className="text-xl font-bold text-white italic title-font">{p.name}</h4>
+                                                        <p className="text-xs text-spy-pink font-mono">{p.gram}</p>
+                                                    </div>
+
+                                                    <div className="space-y-2 text-xs text-slate-300 font-light border-t border-spy-border pt-3">
+                                                        <p><strong className="text-spy-gold font-semibold">Risk Scenarios:</strong> {p.riskFactors}</p>
+                                                        <p><strong className="text-spy-gold font-semibold">Symptoms:</strong> {p.symptoms}</p>
+                                                        <p className="text-spy-pink bg-pink-950/20 p-2.5 rounded border border-pink-900/30">
+                                                            <strong className="text-rose-300 block mb-0.5">Anya's mind-reading scan:</strong> {p.anyaTelepathy}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="pt-3">
+                                                        <button 
+                                                            onClick={() => {
+                                                                setSelectedPathogen(p.id);
+                                                                setActiveTab('radiology');
+                                                            }}
+                                                            className="w-full text-center py-2 bg-spy-base hover:bg-spy-base/80 border border-spy-border hover:border-spy-gold text-xs font-bold rounded-xl text-spy-gold transition-all"
+                                                        >
+                                                            Load Classified Radiographs
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tab Content 3: CURB-65 Calculator */}
+                        {activeTab === 'curb' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                                
+                                {/* Interactive Toggles */}
+                                <div className="lg:col-span-5 bg-spy-panel border border-spy-border rounded-2xl p-6 space-y-6 shadow-xl">
+                                    <div>
+                                        <span className="text-xs font-mono text-spy-gold uppercase font-semibold">Operation Strix Triage</span>
+                                        <h2 className="text-2xl font-bold text-white title-font">CURB-65 Triage Cipher</h2>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            Twilight uses these 5 tactical metrics to decide whether a lung infection target can be handled on an outpatient basis (home stay) or requires mobilization of deep ICU forces.
+                                        </p>
+                                    </div>
+
+                                    {/* Criteria switches */}
+                                    <div className="space-y-3">
+                                        
+                                        {/* C */}
+                                        <label className={`flex items-start gap-4 p-3 rounded-xl border cursor-pointer transition-all ${curb.confusion ? 'bg-teal-950/20 border-spy-gold' : 'bg-spy-base border-spy-border hover:border-slate-700'}`}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={curb.confusion}
+                                                onChange={(e) => setCurb({...curb, confusion: e.target.checked})}
+                                                className="mt-1 h-4 w-4 accent-spy-gold"
+                                            />
+                                            <div>
+                                                <div className="text-sm font-bold text-white flex items-center gap-2">
+                                                    <span className="bg-spy-border text-spy-gold h-5 w-5 rounded flex items-center justify-center font-mono text-xs">C</span>
+                                                    Confusion (Anya's mind reads static!)
+                                                </div>
+                                                <p className="text-xs text-slate-400 font-light mt-0.5">Disorientation to person, place, or time, or acute mental shifts.</p>
+                                            </div>
+                                        </label>
+
+                                        {/* U */}
+                                        <label className={`flex items-start gap-4 p-3 rounded-xl border cursor-pointer transition-all ${curb.urea ? 'bg-teal-950/20 border-spy-gold' : 'bg-spy-base border-spy-border hover:border-slate-700'}`}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={curb.urea}
+                                                onChange={(e) => setCurb({...curb, urea: e.target.checked})}
+                                                className="mt-1 h-4 w-4 accent-spy-gold"
+                                            />
+                                            <div>
+                                                <div className="text-sm font-bold text-white flex items-center gap-2">
+                                                    <span className="bg-spy-border text-spy-gold h-5 w-5 rounded flex items-center justify-center font-mono text-xs">U</span>
+                                                    Urea (BUN) &gt; 19 mg/dL
+                                                </div>
+                                                <p className="text-xs text-slate-400 font-light mt-0.5">Indicates metabolic stress, dehydration, or failing renal barriers.</p>
+                                            </div>
+                                        </label>
+
+                                        {/* R */}
+                                        <label className={`flex items-start gap-4 p-3 rounded-xl border cursor-pointer transition-all ${curb.respRate ? 'bg-teal-950/20 border-spy-gold' : 'bg-spy-base border-spy-border hover:border-slate-700'}`}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={curb.respRate}
+                                                onChange={(e) => setCurb({...curb, respRate: e.target.checked})}
+                                                className="mt-1 h-4 w-4 accent-spy-gold"
+                                            />
+                                            <div>
+                                                <div className="text-sm font-bold text-white flex items-center gap-2">
+                                                    <span className="bg-spy-border text-spy-gold h-5 w-5 rounded flex items-center justify-center font-mono text-xs">R</span>
+                                                    Respiratory Rate &ge; 30 breaths/min
+                                                </div>
+                                                <p className="text-xs text-slate-400 font-light mt-0.5">Severe panting, indicating the lungs are working overtime to exchange air.</p>
+                                            </div>
+                                        </label>
+
+                                        {/* B */}
+                                        <label className={`flex items-start gap-4 p-3 rounded-xl border cursor-pointer transition-all ${curb.bp ? 'bg-teal-950/20 border-spy-gold' : 'bg-spy-base border-spy-border hover:border-slate-700'}`}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={curb.bp}
+                                                onChange={(e) => setCurb({...curb, bp: e.target.checked})}
+                                                className="mt-1 h-4 w-4 accent-spy-gold"
+                                            />
+                                            <div>
+                                                <div className="text-sm font-bold text-white flex items-center gap-2">
+                                                    <span className="bg-spy-border text-spy-gold h-5 w-5 rounded flex items-center justify-center font-mono text-xs">B</span>
+                                                    Blood Pressure &lt; 90 mmHg systolic or &le; 60 mmHg diastolic
+                                                </div>
+                                                <p className="text-xs text-slate-400 font-light mt-0.5">Failing cardiovascular system; high warning for imminent septic shock.</p>
+                                            </div>
+                                        </label>
+
+                                        {/* 65 */}
+                                        <label className={`flex items-start gap-4 p-3 rounded-xl border cursor-pointer transition-all ${curb.age ? 'bg-teal-950/20 border-spy-gold' : 'bg-spy-base border-spy-border hover:border-slate-700'}`}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={curb.age}
+                                                onChange={(e) => setCurb({...curb, age: e.target.checked})}
+                                                className="mt-1 h-4 w-4 accent-spy-gold"
+                                            />
+                                            <div>
+                                                <div className="text-sm font-bold text-white flex items-center gap-2">
+                                                    <span className="bg-spy-border text-spy-gold h-5 w-5 rounded flex items-center justify-center font-mono text-xs">65</span>
+                                                    Age &ge; 65 years old
+                                                </div>
+                                                <p className="text-xs text-slate-400 font-light mt-0.5">Advanced tactical age carrying a higher baseline mortality risk.</p>
+                                            </div>
+                                        </label>
+
+                                    </div>
+
+                                    <div className="flex justify-end pt-2">
+                                        <button 
+                                            onClick={() => setCurb({confusion: false, urea: false, respRate: false, bp: false, age: false})}
+                                            className="text-xs text-slate-500 hover:text-slate-300"
+                                        >
+                                            Reset Triage Cipher
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Score Feedback Display */}
+                                <div className="lg:col-span-7 bg-spy-panel/30 border border-spy-border rounded-2xl p-6 md:p-8 space-y-6 flex flex-col justify-between h-full min-h-[400px]">
+                                    
+                                    {/* Large Score Indicator */}
+                                    <div className="text-center space-y-3">
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Calculated CURB-65 Threat Index</h3>
+                                        
+                                        <div className="inline-flex items-center justify-center h-32 w-32 rounded-full border-4 border-spy-gold bg-spy-base shadow-2xl relative">
+                                            <span className="text-5xl font-black text-spy-gold">{curbScore}</span>
+                                            <span className="absolute bottom-2 text-[10px] text-spy-pink uppercase tracking-wider font-bold">Severity Score</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Clinical Triage Recommendation */}
+                                    <div className={`border rounded-2xl p-5 ${curbRecommendation.color} transition-all duration-300`}>
+                                        <div className="text-xs uppercase font-bold tracking-wider opacity-80">Risk Level</div>
+                                        <div className="text-lg font-black mt-0.5">{curbRecommendation.level}</div>
+                                        
+                                        <div className="mt-3 text-sm font-bold border-t border-current/20 pt-3">
+                                            Tactical Disposition Plan:
+                                        </div>
+                                        <div className="text-base font-extrabold text-white mt-1">
+                                            {curbRecommendation.action}
+                                        </div>
+                                        <p className="text-xs text-slate-300 font-light mt-1.5 leading-relaxed">
+                                            {curbRecommendation.desc}
+                                        </p>
+                                    </div>
+
+                                    {/* High Yield Pearls Box */}
+                                    <div className="bg-spy-panel border border-spy-border p-4 rounded-xl text-xs space-y-2">
+                                        <strong className="text-spy-pink uppercase font-bold block">Anya's Smart Study Note:</strong>
+                                        <p className="text-slate-400 font-light leading-relaxed">
+                                            Twilight says if they go to the Hospital Ward, always give a **Fluoroquinolone** (Levofloxacin) OR a **Beta-lactam** (Ceftriaxone) plus a **Macrolide** (Azithromycin) so we cover BOTH typical germs and atypical invisible germs!
+                                        </p>
+                                    </div>
+
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tab Content 4: Board Quiz Case Challenges (Eden Midterm Exam) */}
+                        {activeTab === 'quiz' && (
+                            <div className="max-w-4xl mx-auto space-y-6">
+                                
+                                {/* Quiz Header */}
+                                <div className="bg-spy-panel p-5 rounded-2xl border border-spy-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div>
+                                        <h2 className="text-xl font-bold text-spy-gold title-font">Eden Academy Midterm Board Exam</h2>
+                                        <p className="text-xs text-slate-400 mt-1">Collect Stella Stars for Anya and avoid Tonitrus bolts to maintain high standing!</p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-xs font-mono bg-spy-base px-3 py-1.5 rounded-lg border border-spy-border">
+                                            Star Score: <span className="text-spy-gold font-bold text-sm">{stellaCount} ⭐</span> / {CASES.length}
+                                        </div>
+                                        <button 
+                                            onClick={resetQuiz}
+                                            className="px-3 py-1.5 bg-spy-base hover:bg-spy-base/60 text-slate-400 hover:text-white border border-spy-border rounded-lg text-xs font-semibold transition-all"
+                                        >
+                                            Reset Exam
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Expelled Warning if 8 Tonitrus bolts reached */}
+                                {tonitrusCount >= 8 ? (
+                                    <div className="bg-rose-950/40 border border-rose-500 rounded-2xl p-8 text-center space-y-4">
+                                        <span className="text-5xl block">(T＿T)</span>
+                                        <h3 className="text-2xl font-bold text-rose-400">Anya Got Expelled!</h3>
+                                        <p className="text-xs text-slate-300 max-w-md mx-auto">
+                                            Oh no! You collected too many Tonitrus Bolts. Housemaster Henderson says this is completely un-elegant! Let's wipe the slate clean and try again.
+                                        </p>
+                                        <button 
+                                            onClick={resetQuiz}
+                                            className="px-4 py-2 bg-spy-gold text-spy-base font-bold rounded-xl text-xs"
+                                        >
+                                            Retry Anya's Exam
+                                        </button>
+                                    </div>
+                                ) : (
+                                    /* Case Panel */
+                                    <div className="bg-spy-panel border border-spy-border rounded-2xl p-6 md:p-8 space-y-6 shadow-xl">
+                                        
+                                        {/* Case Title */}
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs bg-teal-950/60 text-spy-gold border border-spy-border px-3 py-1 rounded-full font-bold">Case Question {quizIndex + 1} of {CASES.length}</span>
+                                            <span className="text-xs text-slate-500 font-mono">Classified USMLE Cipher</span>
+                                        </div>
+
+                                        {/* Question text */}
+                                        <div className="p-4 bg-spy-base border border-spy-border rounded-xl leading-relaxed text-sm md:text-base font-light text-slate-200">
+                                            {CASES[quizIndex].vignette}
+                                        </div>
+
+                                        {/* Multiple choice selections */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {CASES[quizIndex].options.map((opt) => {
+                                                let btnStyle = "bg-spy-base border-spy-border hover:border-spy-gold text-slate-300";
+                                                if (quizAnswered) {
+                                                    if (opt.correct) {
+                                                        btnStyle = "bg-emerald-950/40 border-emerald-500 text-emerald-400";
+                                                    } else if (selectedOption?.key === opt.key) {
+                                                        btnStyle = "bg-rose-950/40 border-rose-500 text-rose-400";
+                                                    } else {
+                                                        btnStyle = "bg-spy-base/20 border-spy-border/20 text-slate-500 opacity-60";
+                                                    }
+                                                }
+
+                                                return (
+                                                    <button
+                                                        key={opt.key}
+                                                        disabled={quizAnswered}
+                                                        onClick={() => handleQuizAnswer(opt)}
+                                                        className={`p-4 rounded-xl border text-left flex items-start gap-3 transition-all ${btnStyle}`}
+                                                    >
+                                                        <span className="font-mono font-bold text-xs bg-spy-panel h-6 w-6 rounded flex items-center justify-center shrink-0 border border-spy-border">{opt.key}</span>
+                                                        <div className="text-sm font-semibold">{opt.text}</div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Feedback / Explanations */}
+                                        {quizAnswered && (
+                                            <div className="bg-spy-base/80 border border-spy-border p-5 rounded-xl space-y-4">
+                                                <div className="flex items-center gap-2">
+                                                    {selectedOption?.correct ? (
+                                                        <span className="text-emerald-400 font-bold text-sm flex items-center gap-1.5">
+                                                            <span>⭐</span>
+                                                            Henderson screams: "ELEGANT! Anya earns a Stella Star!"
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-rose-400 font-bold text-sm flex items-center gap-1.5">
+                                                            <span>⚡</span>
+                                                            Anya receives a Tonitrus Bolt! Crying Anya: "Anya will do better!"
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <p className="text-xs md:text-sm text-slate-300 font-light leading-relaxed">
+                                                    <span dangerouslySetInnerHTML={{ __html: CASES[quizIndex].explanation }} />
+                                                </p>
+
+                                                <div className="bg-yellow-950/20 p-3 rounded-lg border border-spy-gold/30 text-xs text-spy-gold">
+                                                    <strong>Twilight's Mission Memo:</strong> {CASES[quizIndex].pearl}
+                                                </div>
+
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        onClick={nextQuizQuestion}
+                                                        className="px-4 py-2 bg-spy-gold hover:bg-yellow-400 text-spy-base font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-spy-gold/10"
+                                                    >
+                                                        Next Midterm Challenge
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* Footer with Eden School motto */}
+                    <footer className="border-t border-spy-border bg-spy-panel/80 p-6 text-center text-xs text-slate-500 mt-12 space-y-2">
+                        <p className="text-spy-gold font-bold uppercase tracking-wider mono text-[10px]">Eden Academy Medical Honor Board • Operation Strix</p>
+                        <p>© 2026 Pulmonology Intelligence Branch. Created for high-yield USMLE educational study and training review missions.</p>
+                    </footer>
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
